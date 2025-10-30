@@ -1,137 +1,126 @@
 // Notwendige Importe
-import { Book } from '../models/book'; // Unser "Book"-Modell (Interface) [cite: 211]
-import { v4 as uuidv4 } from 'uuid';   // Zum Erstellen von einzigartigen IDs [cite: 189, 214]
+import { Book } from '../models/book'; // Unser "Book"-Modell
+import { v4 as uuidv4 } from 'uuid';   // Zum Erstellen von einzigartigen IDs
+import fs from 'fs'; // Node.js File System Modul
+import path from 'path'; // Node.js Pfad-Modul
 
-/**
- * Unsere In-Memory-Datenbank.
- * Wir starten mit einem leeren Array [].
- * Laut Aufgabe (002) speichern wir die Daten "in Memory".
- */
-let books: Book[] = [];
+const bookDbPath = path.resolve(process.cwd(), 'src', 'data', 'books.json');
 
-/**
- * HINWEIS (Optionale Aufgabe):
- * An dieser Stelle könnten wir 'fs.readFileSync' verwenden,
- * um die optionale Datei 'src/data/books.json' zu laden[cite: 204, 233].
- */
+// === HILFSFUNKTIONEN für JSON ===
+const loadBooks = (): Book[] => {
+    try {
+        // Versucht, die Datei zu lesen
+        const data = fs.readFileSync(bookDbPath, 'utf-8');
+        // Wandelt den Text (String) in ein JSON-Objekt (Book-Array) um
+        return JSON.parse(data);
+    } catch (error: any) {
+        // Wenn die Datei nicht existiert (z.B. erster Start),
+        // wird ein leeres Array zurückgegeben.
+        if (error.code === 'ENOENT') {
+            console.log('Hinweis: src/data/books.json nicht gefunden. Starte mit leerem Array.');
+            return [];
+        }
+        // Bei anderen Fehlern (z.B. JSON-Format ungültig)
+        console.error('Fehler beim Laden der books.json:', error);
+        process.exit(1); // Beendet den Server bei einem kritischen Ladefehler
+    }
+};
+const saveBooks = () => {
+    try {
+        // Wandelt das 'books'-Array zurück in einen formatierten String
+        // (null, 2 sorgt für "schöne" Formatierung mit Einzügen)
+        const data = JSON.stringify(books, null, 2);
+        // Schreibt die Daten synchron in die Datei
+        fs.writeFileSync(bookDbPath, data, 'utf-8');
+    } catch (error) {
+        console.error('Fehler beim Speichern der books.json:', error);
+    }
+};
 
-// === SERVICE-FUNKTIONEN ===
+// ===============================================
+
+let books: Book[] = loadBooks();
+
+
+// === SERVICE-FUNKTIONEN===
 
 /**
  * Funktion 1: Alle Bücher abrufen
- * (Entspricht 'fetchAllBooks')
  */
 export const getAllBooks = (): Book[] => {
-    // Gibt einfach das komplette Array zurück
     return books;
 };
 
 /**
  * Funktion 2: Ein einzelnes Buch über die ID abrufen
- * (Entspricht 'fetchBookById')
  */
 export const getBookById = (id: string): Book | undefined => {
-    // Sucht das Buch im Array anhand der ID.
-    // Gibt 'undefined' zurück, wenn nichts gefunden wird.
     return books.find(book => book.id === id);
 };
 
 /**
  * Funktion 3: Ein neues Buch erstellen
- * (Entspricht 'createNewBook')
- *
- * Nimmt die Eingabedaten (title, author, isbn...) entgegen.
- *
- * Omit<...> ist ein TypeScript-Hilfsmittel und bedeutet:
- * Nimm alle Felder von 'Book', außer 'id', 'createdAt' und 'updatedAt'.
- * Diese werden hier automatisch generiert[cite: 229].
  */
 export const createBook = (input: Omit<Book, 'id' | 'createdAt' | 'updatedAt'>): Book => {
 
-    // Ein neues Buch-Objekt erstellen, basierend auf dem Interface
     const newBook: Book = {
-        id: uuidv4(), // Automatische ID-Zuweisung [cite: 214, 229]
-        title: input.title,
-        author: input.author,
-        isbn: input.isbn,
-        publishedDate: input.publishedDate,
-        available: input.available,
-        createdAt: new Date(), // Automatisches Erstellungsdatum [cite: 224, 229]
-        updatedAt: new Date(), // Automatisches Update-Datum [cite: 226, 229]
+        id: uuidv4(),
+        ...input,
+        createdAt: new Date(),
+        updatedAt: new Date(),
     };
 
-    // Das newBook zum In-Memory-Array 'books' hinzufügen
     books.push(newBook);
 
-    /**
-     * HINWEIS (Optionale Aufgabe):
-     * Nach 'books.push(newBook)' müssten wir hier die optionale
-     * JSON-Datei synchron speichern (fs.writeFileSync)[cite: 234].
-     */
+    saveBooks();
 
-    // Das komplett neue Buch zurückgeben (wichtig für die "201 Created"-Antwort)
     return newBook;
 };
 
 /**
  * Funktion 4: Ein bestehendes Buch aktualisieren
- * (Entspricht 'updateExistingBook')
  */
 export const updateBook = (
     id: string,
-    updates: Partial<Omit<Book, 'id' | 'createdAt' | 'updatedAt'>> // Partial<> erlaubt Teil-Updates
+    updates: Partial<Omit<Book, 'id' | 'createdAt' | 'updatedAt'>>
 ): Book | undefined => {
 
-    // Findet den Index (die Position) des Buches im Array
     const bookIndex = books.findIndex(book => book.id === id);
 
-    // Buch nicht gefunden
     if (bookIndex === -1) {
-        return undefined; // Controller wird hieraus 404 Not Found machen
+        return undefined;
     }
 
-    // Das alte Buch holen
     const originalBook = books[bookIndex];
 
-    // Das neue, aktualisierte Buch-Objekt erstellen
     const updatedBook: Book = {
-        ...originalBook,         // Behält die alte 'id' und 'createdAt' bei
-        ...updates,              // Wendet die neuen Daten aus 'updates' an
-        updatedAt: new Date(),   // Setzt das 'updatedAt'-Datum auf jetzt [cite: 226]
+        ...originalBook,
+        ...updates,
+        updatedAt: new Date(),
     };
 
-    // Das alte Buch im Array durch das neue ersetzen
     books[bookIndex] = updatedBook;
 
-    /**
-     * HINWEIS (Optionale Aufgabe):
-     * Hier müsste auch 'fs.writeFileSync' aufgerufen werden[cite: 234].
-     */
+    // Nach der Änderung in die Datei speichern
+    saveBooks();
 
     return updatedBook;
 };
 
 /**
  * Funktion 5: Ein Buch löschen
- * (Entspricht 'deleteBookById')
  */
 export const deleteBook = (id: string): boolean => {
-    // Findet den Index des Buches
     const bookIndex = books.findIndex(book => book.id === id);
 
-    // Buch nicht gefunden, 'false' zurückgeben
     if (bookIndex === -1) {
-        return false; // Controller macht 404
+        return false;
     }
 
-    // Das Buch aus dem Array entfernen (splice)
     books.splice(bookIndex, 1);
 
-    /**
-     * HINWEIS (Optionale Aufgabe):
-     * Hier müsste auch 'fs.writeFileSync' aufgerufen werden[cite: 234].
-     */
+    //Nach der Änderung in die Datei speichern
+    saveBooks();
 
-    // Erfolgreich gelöscht, 'true' zurückgeben (Controller macht 204 No Content)
     return true;
 };

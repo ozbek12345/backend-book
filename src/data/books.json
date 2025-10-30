@@ -1,0 +1,12 @@
+[
+  {
+    "id": "a95e3d30-3da2-4e14-9eac-222a8ad65b3a",
+    "title": "Das erste Buch",
+    "author": "Autor A",
+    "isbn": "0000000001",
+    "publishedDate": "2025-01-01",
+    "available": true,
+    "createdAt": "2025-10-30T12:22:57.648Z",
+    "updatedAt": "2025-10-30T12:22:57.648Z"
+  }
+]

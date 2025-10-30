@@ -1,0 +1,253 @@
+= API Dokumentation: Buch-Bibliothek (Aufgabe 002)
+:toc: left
+:toclevels: 3
+:sectnums:
+:sourcedir: .
+
+Dieses Dokument beschreibt die REST-API zur Verwaltung einer Buch-Bibliothek, erstellt mit Node.js, Express und TypeScript. 
+Ursprünglich wurden die Daten "In-Memory" gespeichert, aber (wie in Abschnitt 3 beschrieben) wurde dies später auf eine persistente `books.json`-Datei erweitert.
+
+== 1. Installation und Setup
+
+=== 1.1. Installation
+Um das Projekt lokal auszuführen, sind folgende Schritte notwendig:
+
+. Repository klonen:
++
+[source,bash]
+----
+git clone https://github.com/ozbek12345/backend-book.git
+----
+. In das Verzeichnis wechseln:
++
+[source,bash]
+----
+cd backend-book
+----
+. Abhängigkeiten (Pakete) installieren:
++
+[source,bash]
+----
+npm install
+----
+
+=== 1.2. Startskripte
+
+==== Entwicklungsmodus (Development)
+Startet den Server mit `ts-node-dev`. Der Server wird bei jeder Dateiänderung automatisch neu gestartet.
+
+[source,bash]
+----
+npm run dev
+----
+Der Server läuft unter `http://localhost:4000`.
+
+==== Produktionsmodus (Production)
+(Dieser Befehl muss erst in `package.json` unter `scripts` als "build" und "start" hinzugefügt werden)
+
+[source,bash]
+----
+# 1. TypeScript zu JavaScript kompilieren
+npm run build
+
+# 2. Kompilierten Code starten
+npm run start
+----
+
+== 2. API-Endpunkte (Beschreibung)
+
+Alle Endpunkte beginnen mit dem Präfix `/api`.
+
+=== 2.1. GET /api/books
+[cite_start]Ruft eine Liste aller Bücher ab[cite: 197].
+
+* [cite_start]**Erfolgsantwort (200 OK):** [cite: 200]
++
+[source,json]
+----
+[
+  {
+    "id": "a1b2c3d4-...",
+    "title": "TypeScript Grundlagen",
+    "author": "Hans Mustermann",
+    "isbn": "1234567890",
+    "publishedDate": "2024-01-01",
+    "available": true,
+    "createdAt": "2025-10-30T09:00:00.000Z",
+    "updatedAt": "2025-10-30T09:00:00.000Z"
+  }
+]
+----
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl http://localhost:4000/api/books
+----
+
+=== 2.2. GET /api/books/:id
+[cite_start]Ruft ein einzelnes Buch anhand seiner ID ab[cite: 198].
+
+* [cite_start]**Erfolgsantwort (200 OK):** Ein einzelnes Buch-Objekt (siehe oben)[cite: 202].
+* [cite_start]**Fehlerantwort (404 Not Found):** Wenn die ID nicht existiert[cite: 202].
++
+[source,json]
+----
+{ "message": "Buch nicht gefunden" }
+----
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl http://localhost:4000/api/books/a1b2c3d4-...
+----
+
+=== 2.3. POST /api/books
+[cite_start]Erstellt ein neues Buch[cite: 199]. Die Daten müssen als JSON im Body gesendet werden.
+
+* [cite_start]**Erfolgsantwort (201 Created):** Das neu erstellte Buch-Objekt[cite: 203].
+* [cite_start]**Fehlerantwort (400 Bad Request):** Bei Validierungsfehlern [cite: 203, 208-217].
++
+[source,json]
+----
+{
+  "message": "Ungültige Eingabedaten",
+  "errors": [
+    "Titel ist erforderlich und muss mindestens 3 Zeichen lang sein."
+  ]
+}
+----
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl -X POST http://localhost:4000/api/books \
+-H "Content-Type: application/json" \
+-d '{
+    "title": "Neues Buch",
+    "author": "Neuer Autor",
+    "isbn": "9876543210",
+    "publishedDate": "2025-02-02",
+    "available": false
+}'
+----
+
+=== 2.4. PUT /api/books/:id
+[cite_start]Aktualisiert ein bestehendes Buch anhand seiner ID[cite: 201].
+
+* [cite_start]**Erfolgsantwort (200 OK):** Das aktualisierte Buch-Objekt[cite: 206].
+* [cite_start]**Fehlerantwort (404 Not Found):** Wenn die ID nicht existiert[cite: 206].
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl -X PUT http://localhost:4000/api/books/a1b2c3d4-... \
+-H "Content-Type: application/json" \
+-d '{
+    "title": "Aktualisierter Titel",
+    "available": true
+}'
+----
+
+=== 2.5. DELETE /api/books/:id
+[cite_start]Löscht ein Buch anhand seiner ID[cite: 204].
+
+* [cite_start]**Erfolgsantwort (204 No Content):** (Kein Inhalt, erfolgreiches Löschen)[cite: 207].
+* [cite_start]**Fehlerantwort (404 Not Found):** Wenn die ID nicht existiert[cite: 207].
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl -X DELETE http://localhost:4000/api/books/a1b2c3d4-...
+----
+
+== 3. Optionale Erweiterungen (Kann-Kriterien)
+
+[cite_start]Um die API robuster und professioneller zu gestalten, wurden die folgenden optionalen Schritte aus der Aufgabenstellung [cite: 234-255] ebenfalls umgesetzt.
+
+=== 3.1. [cite_start]JSON-Datei als Persistenz [cite: 235-239]
+Standardmäßig speichert der Service die Daten nur "In-Memory" (in einem Array). Das bedeutet, bei jedem Neustart des Servers (`npm run dev`) wären alle Bücher weg.
+
+Um das zu beheben, habe ich die optionale JSON-Persistenz implementiert:
+
+1.  [cite_start]Eine `src/data/books.json`-Datei wurde erstellt und mit `[]` (einem leeren Array) initialisiert[cite: 236].
+2.  [cite_start]Der `bookService.ts` wurde so angepasst, dass er beim Start die `books.json`-Datei liest (`fs.readFileSync`)[cite: 237].
+3.  [cite_start]Nach jeder Änderung (Erstellen, Aktualisieren, Löschen) wird die komplette Liste sofort zurück in die `books.json`-Datei geschrieben (`fs.writeFileSync`)[cite: 238].
+
+Dadurch bleiben die Daten auch nach einem Neustart des Servers erhalten.
+
+=== 3.2. [cite_start]CORS-Konfiguration [cite: 248-251]
+Damit ein externes Frontend (z.B. eine React-App, die auf `http://localhost:3000` läuft) auf diese API (die auf `http://localhost:4000` läuft) zugreifen kann, musste CORS (Cross-Origin Resource Sharing) konfiguriert werden. Ohne dies würde der Browser die Anfragen blockieren.
+
+1.  Das `cors`-Paket wurde installiert:
++
+[source,bash]
+----
+npm install cors
+npm install -D @types/cors
+----
+2.  CORS wurde in `index.ts` als Middleware hinzugefügt, um Anfragen von `localhost:3000` explizit zu erlauben:
++
+[source,typescript]
+----
+// In index.ts hinzugefügt:
+import cors from 'cors';
+// ...
+app.use(cors({
+  origin: 'http://localhost:3000'
+}));
+----
+
+=== 3.3. [cite_start]Unit- und Integrationstests (Jest & Supertest) [cite: 253-255]
+Um die Funktionalität der API zu beweisen und sicherzustellen, dass zukünftige Änderungen (z.B. am `bookService`) nichts kaputt machen, habe ich Tests geschrieben.
+
+1.  Jest (für das Test-Framework), `ts-jest` (für TypeScript) und `supertest` (für HTTP-Anfragen) wurden installiert:
++
+[source,bash]
+----
+npm install -D jest ts-jest @types/jest supertest @types/supertest
+----
+2.  Eine `jest.config.js` wurde erstellt, um Jest für TypeScript zu konfigurieren.
+3.  Der `test`-Befehl in `package.json` wurde angepasst:
++
+[source,json]
+----
+// package.json
+"scripts": {
+  "test": "jest --detectOpenHandles"
+}
+----
+4.  Die Integrationstests wurden in `src/__tests__/api.test.ts` geschrieben.
+
+==== Wichtige Erkenntnis beim Testen:
+Ein Problem war, dass sich die Tests gegenseitig beeinflusst haben (z.B. hat Test 1 ein Buch hinzugefügt, was Test 3 fehlschlagen ließ, der nur 1 Buch erwartete).
+
+**Lösung:** Ein `beforeEach`-Hook in `api.test.ts` leert vor *jedem* einzelnen Test die `books.json`-Datei und lädt die `app` (`index.ts`) komplett neu. Dies garantiert, dass jeder Test mit einer sauberen, leeren Datenbank startet.
+
+[source,typescript]
+----
+// In src/__tests__/api.test.ts
+// ...
+beforeEach(() => {
+  // 1. Setzt die JSON-Datei zurück
+  fs.writeFileSync(bookDbPath, '[]', 'utf-8');
+  
+  // 2. Löscht den Cache, damit der Service neu geladen wird
+  jest.resetModules();
+  
+  // 3. Lädt die App neu (damit sie die leere JSON-Datei einliest)
+  app = require('../index').default;
+});
+----
+Das Ergebnis ist ein erfolgreicher Testlauf, der die CRUD-Funktionalität und die Validierung bestätigt:
+
+[source,bash]
+----
+$ npm test
+
+> PASS  src/__tests__/api.test.ts (3 Tests bestanden ✓)
+----
+
+=== 3.4. [cite_start]Swagger/OpenAPI-Dokumentation [cite: 244-247]
+(Dieser optionale Schritt wurde nicht implementiert.)
+

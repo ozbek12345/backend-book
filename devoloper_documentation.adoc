@@ -1,0 +1,161 @@
+= API Dokumentation: Buch-Bibliothek (Aufgabe 002)
+:toc: left
+:toclevels: 3
+:sectnums:
+:sourcedir: .
+
+Dieses Dokument beschreibt die REST-API zur Verwaltung einer Buch-Bibliothek, erstellt mit Node.js, Express und TypeScript. Die Daten werden "In-Memory" gespeichert.
+
+== 1. Installation und Setup
+
+=== 1.1. Installation
+Um das Projekt lokal auszuführen, sind folgende Schritte notwendig:
+
+. Repository klonen:
++
+[source,bash]
+----
+git clone https://github.com/DEIN-NAME/backend-book.git
+----
+. In das Verzeichnis wechseln:
++
+[source,bash]
+----
+cd backend-book
+----
+. Abhängigkeiten (Pakete) installieren:
++
+[source,bash]
+----
+npm install
+----
+
+=== 1.2. Startskripte
+
+==== Entwicklungsmodus (Development)
+Startet den Server mit `ts-node-dev`. Der Server wird bei jeder Dateiänderung automatisch neu gestartet.
+
+[source,bash]
+----
+npm run dev
+----
+Der Server läuft unter `http://localhost:4000`.
+
+==== Produktionsmodus (Production)
+(Dieser Befehl muss erst in `package.json` unter `scripts` als "build" und "start" hinzugefügt werden)
+
+[source,bash]
+----
+# 1. TypeScript zu JavaScript kompilieren
+npm run build
+
+# 2. Kompilierten Code starten
+npm run start
+----
+
+== 2. API-Endpunkte (Beschreibung)
+
+Alle Endpunkte beginnen mit dem Präfix `/api`.
+
+=== 2.1. GET /api/books
+Ruft eine Liste aller Bücher ab[cite: 272].
+
+* **Erfolgsantwort (200 OK):** [cite: 275]
++
+[source,json]
+----
+[
+  {
+    "id": "a1b2c3d4-...",
+    "title": "TypeScript Grundlagen",
+    "author": "Hans Mustermann",
+    "isbn": "1234567890",
+    "publishedDate": "2024-01-01",
+    "available": true,
+    "createdAt": "2025-10-30T09:00:00.000Z",
+    "updatedAt": "2025-10-30T09:00:00.000Z"
+  }
+]
+----
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl http://localhost:4000/api/books
+----
+
+=== 2.2. GET /api/books/:id
+Ruft ein einzelnes Buch anhand seiner ID ab[cite: 273].
+
+* [cite_start]**Erfolgsantwort (200 OK):** Ein einzelnes Buch-Objekt (siehe oben)[cite: 277].
+* [cite_start]**Fehlerantwort (404 Not Found):** Wenn die ID nicht existiert[cite: 277].
++
+[source,json]
+----
+{ "message": "Buch nicht gefunden" }
+----
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl http://localhost:4000/api/books/a1b2c3d4-...
+----
+
+=== 2.3. POST /api/books
+Erstellt ein neues Buch[cite: 274]. Die Daten müssen als JSON im Body gesendet werden.
+
+* [cite_start]**Erfolgsantwort (201 Created):** Das neu erstellte Buch-Objekt[cite: 278].
+* [cite_start]**Fehlerantwort (400 Bad Request):** Bei Validierungsfehlern [cite: 278, 283-290].
++
+[source,json]
+----
+{
+  "message": "Ungültige Eingabedaten",
+  "errors": [
+    "Titel ist erforderlich und muss mindestens 3 Zeichen lang sein."
+  ]
+}
+----
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl -X POST http://localhost:4000/api/books \
+-H "Content-Type: application/json" \
+-d '{
+    "title": "Neues Buch",
+    "author": "Neuer Autor",
+    "isbn": "9876543210",
+    "publishedDate": "2025-02-02",
+    "available": false
+}'
+----
+
+=== 2.4. PUT /api/books/:id
+Aktualisiert ein bestehendes Buch anhand seiner ID[cite: 276].
+
+* [cite_start]**Erfolgsantwort (200 OK):** Das aktualisierte Buch-Objekt [cite: 280-281].
+* [cite_start]**Fehlerantwort (404 Not Found):** Wenn die ID nicht existiert [cite: 280-281].
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl -X PUT http://localhost:4000/api/books/a1b2c3d4-... \
+-H "Content-Type: application/json" \
+-d '{
+    "title": "Aktualisierter Titel",
+    "available": true
+}'
+----
+
+=== 2.5. DELETE /api/books/:id
+Löscht ein Buch anhand seiner ID[cite: 279].
+
+* [cite_start]**Erfolgsantwort (204 No Content):** (Kein Inhalt, erfolgreiches Löschen)[cite: 282].
+* [cite_start]**Fehlerantwort (404 Not Found):** Wenn die ID nicht existiert[cite: 282].
+* **cURL-Beispiel:**
++
+[source,bash]
+----
+curl -X DELETE http://localhost:4000/api/books/a1b2c3d4-...
+----
